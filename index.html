@@ -1,0 +1,7 @@
+<script>
+fetch("https://kyc.booking.com/api/me", {
+  credentials: "include"
+})
+.then(r => r.text())
+.then(console.log)
+</script>
