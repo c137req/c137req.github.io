@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <p>check console</p>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register(
+        '/pwabuilder-sw.js?swRootUrl=https://c137req.github.io/'
+      ).then(reg => {
+        console.log('sw registered', reg);
+      }).catch(err => {
+        console.error('sw registration failed', err);
+      });
+    }
+  </script>
+</body>
+</html>
